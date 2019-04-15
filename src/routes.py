@@ -16,5 +16,10 @@ def get_item():
     iroha_address = '127.0.0.1:8600'
 
     transaction = Transaction(admin_account, admin_private_key, iroha_address)
-    return transaction.put_item(data)
+    result, code = transaction.put_item(data)
+    
+    if code == 201:
+        return result, 201
+    else:
+        return result, 409
 
