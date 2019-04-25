@@ -1,0 +1,45 @@
+{
+	"info": {
+		"_postman_id": "c4f0bd66-e2d1-40f9-93e0-9c11c8ed60cd",
+		"name": "Iroha",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "/iroha_rest/api/v1.0/items",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"data\": {\n\t\"item_type\": \"Pushkino\",\n\t\"item_desc\": \"10\"\t\t\n\t}\n}"
+				},
+				"url": {
+					"raw": "http://127.0.0.1:5000/iroha_rest/api/v1.0/items",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "5000",
+					"path": [
+						"iroha_rest",
+						"api",
+						"v1.0",
+						"items"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

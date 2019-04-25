@@ -20,6 +20,11 @@ To update pip version
 python -m pip install --upgrade pip
 ```
 
+Install Iroha lib from this directory or from pip if exists later version
+```
+pip install iroha-0.0.4.m-py3-none-any.whl
+```
+
 To install dependencies
 ```
 pip install -r requeriments.txt
@@ -46,3 +51,5 @@ For deactivate venv environment
 ```
 deactivate
 ```
+
+In folder "tests" you can take Postman config to test endpoints
