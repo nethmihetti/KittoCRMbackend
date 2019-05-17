@@ -1,9 +1,7 @@
-
-from src import app
-from flask import request
-from flask import abort
-from src.IrohaHandler.transaction import Transaction
 import requests
+from flask import request
+from src import app
+from src.config import transaction_builder
 
 
 @app.route('/requests', methods=['GET'])
@@ -15,20 +13,40 @@ def app_requests():
 
 
 @app.route('/iroha_rest/api/v1.0/items', methods=['POST'])
-def get_item():
+def put_item():
     data = request.get_json()["data"]
+    item = data["item"]
+    company = data["company"].lower()
+    account = data["account"].lower()
+    private_key = data["private_key"]
+    result, code = transaction_builder.put_item(item=item, company=company, account=account, private_key=private_key)
+    return result, code
 
-    #!!! Hardcode
-    admin_account = "admin@test"
-    admin_private_key = "f101537e319568c765b2cc89698325604991dca57b9716b58016b253506cab70"
-    #!!! change to '127.0.0.1:50051' or your one
-    iroha_address = '127.0.0.1:8600'
 
-    transaction = Transaction(admin_account, admin_private_key, iroha_address)
-    result, code = transaction.put_item(data)
-    
-    if code == 201:
-        return result, 201
+@app.route('/iroha_rest/api/v1.0/items', methods=['GET'])
+def validate_item():
+    data = request.get_json()["data"]
+    item = data["item"]
+    private_key = data["private_key"]
+    result = transaction_builder.is_valid_item(item=item, private_key=private_key)
+    if result:
+        return "Item is valid to be insured", 200
     else:
-        return result, 409
+        return "Item is invalid to be insured", 226
 
+
+@app.route('/iroha_rest/api/v1.0/companies', methods=['POST'])
+def create_company():
+    data = request.get_json()["data"]
+    company_name = data["company_name"]
+    result, code = transaction_builder.create_company_domain(company_name)
+    return result, code
+
+
+@app.route('/iroha_rest/api/v1.0/agents', methods=['POST'])
+def create_agent():
+    data = request.get_json()["data"]
+    company_name = data["company_name"]
+    agent_name = data["agent_name"]
+    result, code = transaction_builder.create_agent(company_name=company_name, agent_name=agent_name)
+    return result, code

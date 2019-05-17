@@ -1,16 +1,32 @@
-
+import base64
+from datetime import datetime, date
 
 from iroha import Iroha, IrohaGrpc
-from iroha import IrohaCrypto
+from iroha import IrohaCrypto, primitive_pb2
 import binascii
-import json 
+import json
 
-# admin_account = "admin@test"
-# admin_private_key = "f101537e319568c765b2cc89698325604991dca57b9716b58016b253506cab70"
-# iroha = Iroha(admin_account)
-# net = IrohaGrpc('127.0.0.1:8600')
+from werkzeug.exceptions import abort
 
-class Transaction(object):
+agent_role = "agent"
+
+
+def get_full_acc(name, domain):
+    return name + "@" + domain
+
+
+def is_expired(date_string):
+    date_params = date_string.split("-")
+    today = datetime.now()
+    expiration_date = datetime(day=int(date_params[0]), month=int(date_params[1]), year=int(date_params[2]))
+    if expiration_date >= today:
+        return False
+    else:
+        return True
+
+
+class TransactionBuilder(object):
+
     def __init__(self, admin_account, admin_private_key, port):
         self.admin_account = admin_account
         self.admin_private_key = admin_private_key
@@ -18,44 +34,85 @@ class Transaction(object):
         self.iroha = Iroha(self.admin_account)
         self.net = IrohaGrpc(self.port)
 
-    def send_transaction_and_print_status(self, transaction):
+    def __send_transaction_and_print_status(self, transaction):
         hex_hash = binascii.hexlify(IrohaCrypto.hash(transaction))
         print('Transaction hash = {}, creator = {}'.format(
             hex_hash, transaction.payload.reduced_payload.creator_account_id))
         self.net.send_tx(transaction)
         for status in self.net.tx_status_stream(transaction):
             print(status)
-    # item is dictionary. item.item_type; item.item_desc
-    def put_item(self, item):
-        query = self.iroha.query('GetAccountDetail', account_id=self.admin_account)
-        IrohaCrypto.sign_query(query, self.admin_private_key)
-        response = self.net.send_query(query)
-        data = response.account_detail_response
-        all_items = {}
-        try:
-            all_items = json.loads(str(data)[9:-2].replace("\\", ""))[self.admin_account]
-        except:
-            pass
-        if item["item_type"] in all_items.keys():
+        for status in self.net.tx_status_stream(transaction):
+            if status == ('COMMITTED', 5, 0):
+                return "COMMITTED"
+
+    # item is dictionary. item.id; item.item_type; item.item_desc;
+    def put_item(self, item, account, company, private_key):
+        if not self.is_valid_item(item=item, private_key=private_key):
             return 'Item is already insured', 409
-            # abort(409, 'Item is already insured')
+        item["account"] = account
+        item["company"] = company
         commands = [
             self.iroha.command(
                 'SetAccountDetail',
-                account_id=self.admin_account, 
-                key=item["item_type"], 
-                value=item["item_desc"]
+                account_id=self.admin_account,
+                key=item['item_id'],
+                value=base64.urlsafe_b64encode(json.dumps(item).encode()).decode()
+            ),
+        ]
+        transaction = self.iroha.transaction(commands)
+        IrohaCrypto.sign_transaction(transaction, private_key)
+        if self.__send_transaction_and_print_status(transaction) == "COMMITTED":
+            return item, 201
+        else:
+            return 'Internal Error', 500
+
+    def create_company_domain(self, company_name):
+        commands = [
+            self.iroha.command(
+                'CreateDomain',
+                domain_id=company_name,
+                default_role=agent_role
             ),
         ]
         transaction = self.iroha.transaction(commands)
         IrohaCrypto.sign_transaction(transaction, self.admin_private_key)
-        self.send_transaction_and_print_status(transaction)
-        query = self.iroha.query('GetAccountDetail', account_id='admin@test')
-        IrohaCrypto.sign_query(query, self.admin_private_key)
-        response = self.net.send_query(query)
-        data = response.account_detail_response
-        result = item["item_type"]+":"+str(json.loads(str(data)[9:-2].replace("\\", ""))[self.admin_account][item["item_type"]])
-        return result, 201
+        if self.__send_transaction_and_print_status(transaction) == "COMMITTED":
+            return company_name, 201
+        else:
+            return 'Internal Error', 500
 
-    def get_item(self, id):
-        pass
+
+    def create_agent(self, company_name, agent_name):
+        user_private_key = IrohaCrypto.private_key()
+        user_public_key = IrohaCrypto.derive_public_key(user_private_key)
+        commands = [
+            self.iroha.command('CreateAccount', account_name=agent_name, domain_id=company_name,
+                               public_key=user_public_key),
+            self.iroha.command('GrantPermission', account_id=get_full_acc(agent_name, company_name),
+                               permission=primitive_pb2.can_set_my_account_detail),
+            self.iroha.command('AddSignatory', account_id=self.admin_account,
+                               public_key = user_public_key)
+
+        ]
+        transaction = self.iroha.transaction(commands)
+        IrohaCrypto.sign_transaction(transaction, self.admin_private_key)
+        self.__send_transaction_and_print_status(transaction)
+        if self.__send_transaction_and_print_status(transaction) == "COMMITTED":
+            return (user_private_key, user_public_key), 201
+        else:
+            return 'Internal Error', 500
+
+    def is_valid_item(self, item, private_key):
+        query = self.iroha.query('GetAccountDetail', account_id=self.admin_account, key=item["item_id"])
+        IrohaCrypto.sign_query(query, private_key)
+        response = self.net.send_query(query)
+        if "reason: NO_ACCOUNT_DETAIL" not in str(response.error_response):
+            response_json = json.loads(response.account_detail_response.detail)
+            data = json.loads(base64.urlsafe_b64decode(response_json["reg@common"][item["item_id"]].encode()).decode())
+            date_string = data['insurance_expiration_date']
+            if is_expired(date_string):
+                return True
+            else:
+                return False
+        else:
+            return True
