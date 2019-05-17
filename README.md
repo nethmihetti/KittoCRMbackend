@@ -25,6 +25,8 @@ Install Iroha lib from this directory or from pip if exists later version
 pip install iroha-0.0.4.m-py3-none-any.whl
 ```
 
+Use genesis.block from IrohaHandler folder as basis block for Iroha
+
 To install dependencies
 ```
 pip install -r requeriments.txt
@@ -53,3 +55,6 @@ deactivate
 ```
 
 In folder "tests" you can take Postman config to test endpoints
+OR
+Use iroha_tester.py to write testing scripts
+
