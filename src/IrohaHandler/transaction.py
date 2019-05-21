@@ -62,7 +62,7 @@ class TransactionBuilder(object):
         transaction = self.iroha.transaction(commands)
         IrohaCrypto.sign_transaction(transaction, private_key)
         if self.__send_transaction_and_print_status(transaction) == "COMMITTED":
-            return item, 201
+            return str(item), 201
         else:
             return 'Internal Error', 500
 
@@ -98,7 +98,7 @@ class TransactionBuilder(object):
         IrohaCrypto.sign_transaction(transaction, self.admin_private_key)
         self.__send_transaction_and_print_status(transaction)
         if self.__send_transaction_and_print_status(transaction) == "COMMITTED":
-            return (user_private_key, user_public_key), 201
+            return "Your private key: "+str(user_private_key) + " Your public key: " + str(user_public_key), 201
         else:
             return 'Internal Error', 500
 
