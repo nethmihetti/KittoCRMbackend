@@ -38,7 +38,7 @@ def validate_item():
 @app.route('/iroha_rest/api/v1.0/companies', methods=['POST'])
 def create_company():
     data = request.get_json()["data"]
-    company_name = data["company_name"]
+    company_name = data["company_name"].lower()
     result, code = transaction_builder.create_company_domain(company_name)
     return result, code
 
@@ -46,7 +46,7 @@ def create_company():
 @app.route('/iroha_rest/api/v1.0/agents', methods=['POST'])
 def create_agent():
     data = request.get_json()["data"]
-    company_name = data["company_name"]
-    agent_name = data["agent_name"]
+    company_name = data["company_name"].lower()
+    agent_name = data["agent_name"].lower()
     result, code = transaction_builder.create_agent(company_name=company_name, agent_name=agent_name)
     return result, code

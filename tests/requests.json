@@ -1,0 +1,142 @@
+{
+	"info": {
+		"_postman_id": "1d53978b-c937-478d-a59a-5d2777b82a90",
+		"name": "KittoSelfHosted",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "3put item",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "https://127.0.0.1:5000/iroha_rest/api/v1.0/items",
+					"protocol": "https",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "5000",
+					"path": [
+						"iroha_rest",
+						"api",
+						"v1.0",
+						"items"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "1create_company",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"data\": {\n\t\t\"company_name\": \"Soramitsu\"\t\n\t}\n}"
+				},
+				"url": {
+					"raw": "http://127.0.0.1:5000/iroha_rest/api/v1.0/companies",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "5000",
+					"path": [
+						"iroha_rest",
+						"api",
+						"v1.0",
+						"companies"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "2create_agent",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"data\": {\n\t\t\"company_name\": \"Soramitsu\",\n\t\t\"agent_name\": \"Marat\"\n\t}\n}"
+				},
+				"url": {
+					"raw": "http://127.0.0.1:5000/iroha_rest/api/v1.0/agents",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "5000",
+					"path": [
+						"iroha_rest",
+						"api",
+						"v1.0",
+						"agents"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "optional_validate_item",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"data\": {\n\t\t\"item\": \"Soramitsu\",\n\t\t\"private_key\": \"Marat\"\n\t}\n}"
+				},
+				"url": {
+					"raw": "http://127.0.0.1:5000/iroha_rest/api/v1.0/agents",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "5000",
+					"path": [
+						"iroha_rest",
+						"api",
+						"v1.0",
+						"agents"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
