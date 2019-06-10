@@ -23,12 +23,23 @@ def put_item():
     return result, code
 
 
+@app.route('/iroha_rest/api/v1.0/items', methods=['PATCH'])
+def claim_item():
+    data = request.get_json()["data"]
+    item = data["item"]
+    company = data["company"].lower()
+    account = data["account"].lower()
+    private_key = data["private_key"]
+    result, code = transaction_builder.claim_item(item=item, company=company, account=account, private_key=private_key)
+    return result, code
+
+
 @app.route('/iroha_rest/api/v1.0/items', methods=['GET'])
 def validate_item():
     data = request.get_json()["data"]
     item = data["item"]
     private_key = data["private_key"]
-    result = transaction_builder.is_valid_item(item=item, private_key=private_key)
+    result = transaction_builder.is_insurable_item(item=item, private_key=private_key)
     if result:
         return "Item is valid to be insured", 200
     else:
