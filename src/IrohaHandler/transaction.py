@@ -45,27 +45,6 @@ class TransactionBuilder(object):
             if status == ('COMMITTED', 5, 0):
                 return "COMMITTED"
 
-    # item is dictionary. item.id; item.item_type; item.item_desc;
-    def put_item(self, item, account, company, private_key):
-        if not self.is_valid_item(item=item, private_key=private_key):
-            return 'Item is already insured', 409
-        item["account"] = account
-        item["company"] = company
-        commands = [
-            self.iroha.command(
-                'SetAccountDetail',
-                account_id=self.admin_account,
-                key=item['item_id'],
-                value=base64.urlsafe_b64encode(json.dumps(item).encode()).decode()
-            ),
-        ]
-        transaction = self.iroha.transaction(commands)
-        IrohaCrypto.sign_transaction(transaction, private_key)
-        if self.__send_transaction_and_print_status(transaction) == "COMMITTED":
-            return str(item), 201
-        else:
-            return 'Internal Error', 500
-
     def create_company_domain(self, company_name):
         commands = [
             self.iroha.command(
@@ -81,7 +60,6 @@ class TransactionBuilder(object):
         else:
             return 'Internal Error', 500
 
-
     def create_agent(self, company_name, agent_name):
         user_private_key = IrohaCrypto.private_key()
         user_public_key = IrohaCrypto.derive_public_key(user_private_key)
@@ -91,24 +69,25 @@ class TransactionBuilder(object):
             self.iroha.command('GrantPermission', account_id=get_full_acc(agent_name, company_name),
                                permission=primitive_pb2.can_set_my_account_detail),
             self.iroha.command('AddSignatory', account_id=self.admin_account,
-                               public_key = user_public_key)
+                               public_key=user_public_key)
 
         ]
         transaction = self.iroha.transaction(commands)
         IrohaCrypto.sign_transaction(transaction, self.admin_private_key)
         self.__send_transaction_and_print_status(transaction)
         if self.__send_transaction_and_print_status(transaction) == "COMMITTED":
-            return "Your private key: "+str(user_private_key) + " Your public key: " + str(user_public_key), 201
+            return "Your private key: " + str(user_private_key) + " Your public key: " + str(user_public_key), 201
         else:
             return 'Internal Error', 500
 
-    def is_valid_item(self, item, private_key):
+    def is_insurable_item(self, item, private_key):
         query = self.iroha.query('GetAccountDetail', account_id=self.admin_account, key=item["item_id"])
         IrohaCrypto.sign_query(query, private_key)
         response = self.net.send_query(query)
         if "reason: NO_ACCOUNT_DETAIL" not in str(response.error_response):
             response_json = json.loads(response.account_detail_response.detail)
-            data = json.loads(base64.urlsafe_b64decode(response_json["reg@common"][item["item_id"]].encode()).decode())
+            data = json.loads(
+                base64.urlsafe_b64decode(response_json["reg@common"][item["item_id"]].encode()).decode())
             date_string = data['insurance_expiration_date']
             if is_expired(date_string):
                 return True
@@ -116,3 +95,62 @@ class TransactionBuilder(object):
                 return False
         else:
             return True
+
+    def is_claimable_item(self, item, private_key):
+        query = self.iroha.query('GetAccountDetail', account_id=self.admin_account, key=item["item_id"])
+        IrohaCrypto.sign_query(query, private_key)
+        response = self.net.send_query(query)
+        if "reason: NO_ACCOUNT_DETAIL" not in str(response.error_response):
+            response_json = json.loads(response.account_detail_response.detail)
+            data = json.loads(
+                base64.urlsafe_b64decode(response_json["reg@common"][item["item_id"]].encode()).decode())
+            date_string = data['insurance_expiration_date']
+            if is_expired(date_string):
+                return False
+            else:
+                return True
+        else:
+            return False
+
+    # item is dictionary. item_id; insurance_expiration_date;
+    def put_item(self, item, account, company, private_key):
+        if not self.is_insurable_item(item=item, private_key=private_key):
+            return 'Item is already insured', 409
+        item["account"] = account
+        item["company"] = company
+        commands = [
+            self.iroha.command(
+                'SetAccountDetail',
+                account_id=self.admin_account,
+                key=item['item_id'],
+                value=base64.urlsafe_b64encode(json.dumps(item).encode()).decode()
+            ),
+        ]
+        transaction = self.iroha.transaction(commands=commands, creator_account=self.admin_account)
+        IrohaCrypto.sign_transaction(transaction, private_key)
+        if self.__send_transaction_and_print_status(transaction) == "COMMITTED":
+            return str(item), 201
+        else:
+            return 'Internal Error', 500
+
+    def claim_item(self, item, account, company, private_key):
+        if not self.is_claimable_item(item=item, private_key=private_key):
+            return 'Claim cannot be done', 409
+        item["account"] = account
+        item["company"] = company
+        today = datetime.now()
+        item["insurance_expiration_date"] = today.strftime('%d-%m-%Y')
+        commands = [
+            self.iroha.command(
+                'SetAccountDetail',
+                account_id=self.admin_account,
+                key=item['item_id'],
+                value=base64.urlsafe_b64encode(json.dumps(item).encode()).decode()
+            ),
+        ]
+        transaction = self.iroha.transaction(commands)
+        IrohaCrypto.sign_transaction(transaction, private_key)
+        if self.__send_transaction_and_print_status(transaction) == "COMMITTED":
+            return str(item) + "\nCLAIMED AND EXPIRED", 200
+        else:
+            return 'Internal Error', 500
